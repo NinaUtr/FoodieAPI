@@ -1,52 +1,21 @@
-from typing import Optional, Sequence
-from fastapi import HTTPException
+from typing import Optional
 import httpx
 from sqlalchemy.orm import Session
-
 from app.config import settings
+from app.crud.base import BaseCRUD
+from app.exceptions.recipe import (
+    RecipeDoesNotExistException,
+    RecipeExternalAPIException
+)
 from app.models import Recipe
-from app.schemas.recipe import CreateRecipe, UpdateRecipe, SearchRecipe
+from app.schemas.recipe import SearchRecipe
 
 
-class RecipeCRUD:
-
-    @staticmethod
-    def _check_if_user_can_change_recipe(recipe_submitter_id: int, current_user_id: int):
-        if recipe_submitter_id != current_user_id:
-            raise HTTPException(status_code=403, detail="You don't have access to this operation.")
-
-    @staticmethod
-    def create(db: Session, recipe: CreateRecipe, submitter_id: int) -> Optional[Recipe]:
-        new_recipe = Recipe(**recipe.__dict__, submitter_id=submitter_id)
-        db.add(new_recipe)
-        db.commit()
-        db.refresh(new_recipe)
-        return new_recipe
-
-    @staticmethod
-    def get(db: Session, recipe_id: int) -> Optional[Recipe]:
-        if recipe := db.query(Recipe).filter_by(id=recipe_id).first():
-            return recipe
-        else:
-            raise HTTPException(status_code=404, detail="Not Found")
-
-    def update(self, db: Session, recipe_id: int, recipe: UpdateRecipe, submitter_id: int) -> Optional[Recipe]:
-        if old_recipe := self.get(db, recipe_id):
-            self._check_if_user_can_change_recipe(old_recipe.submitter_id, submitter_id)
-            db.query(Recipe).filter_by(id=recipe_id).update(recipe.__dict__)
-            db.commit()
-            db.refresh(old_recipe)
-            return old_recipe
-
-    def delete(self, db: Session, recipe_id: int, submitter_id: int) -> None:
-        if recipe := self.get(db, recipe_id):
-            self._check_if_user_can_change_recipe(recipe.submitter_id, submitter_id)
-            db.delete(recipe)
-            db.commit()
-
-    @staticmethod
-    def get_all(db: Session) -> Optional[Sequence[Recipe]]:
-        return db.query(Recipe).all()
+class RecipeService(BaseCRUD):
+    def __init__(self):
+        super().__init__()
+        self.model = Recipe
+        self.does_not_exist_exception = RecipeDoesNotExistException
 
     @staticmethod
     def search(db: Session, keyword: Optional[str], max_results: int) -> SearchRecipe:
@@ -65,9 +34,9 @@ class RecipeCRUD:
             )
         recipe = response.json()
         if recipe.get("status"):
-            raise HTTPException(status_code=409, detail="Unable yo get data from api.spoonacular.com")
+            raise RecipeExternalAPIException
 
         return recipe["recipes"][0]
 
 
-recipe_CRUD = RecipeCRUD()
+recipe_service = RecipeService()

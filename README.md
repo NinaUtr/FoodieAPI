@@ -47,7 +47,15 @@ docker-compose exec backend bash -c "alembic upgrade head"
 
 This command will apply any pending database migrations and update the database schema to the latest version defined in your Alembic migration scripts.
 
-Now, your application should be up and ready to use.
+3. Now, your application should be up and ready to use.
 
+Docs:
+```
+http://localhost:8000/docs
+```
 
+Home page:
+```
+http://localhost:8000/home
+```
 

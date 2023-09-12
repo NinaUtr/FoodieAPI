@@ -1,69 +1,51 @@
 from typing import Optional
-
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.crud.base import BaseCRUD
+from app.exceptions.user import (
+    UserDoesNotExistException,
+    UserWrongPasswordException,
+    UserMismatchedPasswordException,
+    UserAlreadyExistException
+)
 from app.utils.password_manager import password_manager
 from app.models import User
-from app.schemas.user import CreateUser, UpdateUser, UpdateUserPassword
+from app.schemas.user import UpdateUserPassword
 
 
-class UserCRUD:
-    @staticmethod
-    def create(db: Session, user: CreateUser) -> User:
-        if db.query(User).filter_by(email=user.email).first():
-            raise HTTPException(status_code=409, detail=f"User with email '{user.email}' already exists.")
+class UserService(BaseCRUD):
+    def __init__(self):
+        super().__init__()
+        self.model = User
+        self.does_not_exist_exception = UserDoesNotExistException
 
-        hashed_password = password_manager.hash_password(user.password)
-        user = user.__dict__
-        user.pop("password")
+    def create(self, db: Session, item_create: dict):
+        if db.query(User).filter_by(email=item_create.get("email")).first():
+            raise UserAlreadyExistException
 
-        new_user = User(hashed_password=hashed_password, **user)
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        return new_user
+        item_create["hashed_password"] = password_manager.hash_password(item_create.get("password"))
+        item_create.pop("password")
+        return super().create(db, item_create)
 
-    @staticmethod
-    def get(db: Session, user_id: int) -> Optional[User]:
-        if user := db.query(User).filter_by(id=user_id).first():
-            return user
-        else:
-            raise HTTPException(status_code=404, detail="Not Found")
-
-    @staticmethod
-    def get_by_email(db: Session, user_email: str) -> Optional[User]:
+    def get_by_email(self, db: Session, user_email: str) -> Optional[User]:
         if user := db.query(User).filter_by(email=user_email).first():
             return user
         else:
-            raise HTTPException(status_code=404, detail="Not Found")
+            raise self.does_not_exist_exception
 
-    def update(self, db: Session, user_id: int, user: UpdateUser) -> Optional[User]:
-        if old_user := self.get(db, user_id):
-            db.query(User).filter_by(id=user_id).update(user.__dict__)
-            db.commit()
-            db.refresh(old_user)
-            return old_user
+    def update_password(self, db: Session, item_id: int, item_update: UpdateUserPassword):
+        if item_update.new_password != item_update.repeated_new_password:
+            raise UserMismatchedPasswordException
 
-    def delete(self, db: Session, user_id: int) -> None:
-        if user := self.get(db, user_id):
-            db.delete(user)
-            db.commit()
+        if user_in_db := self.get(db, item_id):
+            if not password_manager.verify_password(item_update.password, user_in_db.hashed_password):
+                raise UserWrongPasswordException
 
-    def update_password(self, db: Session, user_id: int, user: UpdateUserPassword) -> Optional[User]:
-        if user.new_password != user.repeated_new_password:
-            raise HTTPException(status_code=409, detail=f"New password and repeated new password don't match.")
-
-        if user_in_db := self.get(db, user_id):
-            if not password_manager.verify_password(user.password, user_in_db.hashed_password):
-                raise HTTPException(status_code=409, detail=f"Wrong password.")
-
-            db.query(User).filter_by(id=user_id).update(
-                {"hashed_password": password_manager.hash_password(user.new_password)}
+            super().update(
+                db=db,
+                item_id=item_id,
+                item_update={"hashed_password": password_manager.hash_password(item_update.new_password)}
             )
-            db.commit()
-            db.refresh(user_in_db)
-            return user_in_db
 
 
-user_CRUD = UserCRUD()
+user_service = UserService()
