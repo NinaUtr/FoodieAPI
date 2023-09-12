@@ -8,7 +8,7 @@ from app.exceptions.user import (
     UserMismatchedPasswordException,
     UserAlreadyExistException
 )
-from app.utils.password_manager import password_manager
+from app.managers.password_manager import password_manager
 from app.models import User
 from app.schemas.user import UpdateUserPassword
 

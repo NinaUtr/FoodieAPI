@@ -4,7 +4,7 @@ from app.config import settings
 from app.db.dependency import get_db
 from app.exceptions.user import UserForbiddenException
 
-from app.utils.auth_manager import AuthManager
+from app.managers.auth_manager import AuthManager
 
 
 class UserManager(AuthManager):

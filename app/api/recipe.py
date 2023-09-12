@@ -6,7 +6,7 @@ from app.crud.recipe import recipe_service
 from app.db.dependency import get_db
 from app.schemas.recipe import GetRecipe, CreateRecipe, UpdateRecipe, SearchRecipe, RandomRecipe
 from app.schemas.user import CurrentUser
-from app.utils.recipe_manager import recipe_manager
+from app.managers.recipe_manager import recipe_manager
 
 recipe_router = APIRouter()
 

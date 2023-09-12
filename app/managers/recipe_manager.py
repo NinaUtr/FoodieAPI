@@ -3,7 +3,7 @@ from sqlalchemy.orm.session import Session
 from app.config import settings
 from app.db.dependency import get_db
 from app.exceptions.recipe import RecipeForbiddenException
-from app.utils.auth_manager import AuthManager
+from app.managers.auth_manager import AuthManager
 
 
 class RecipeManager(AuthManager):

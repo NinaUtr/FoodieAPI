@@ -10,7 +10,7 @@ from app.db.dependency import get_db
 from app.exceptions.user import UserIncorrectLoginException, UserCredentialsException
 from app.models.user import User
 from app.schemas.auth import AccessToken
-from app.utils.password_manager import password_manager
+from app.managers.password_manager import password_manager
 
 
 class AuthManager:
